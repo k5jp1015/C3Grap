@@ -1,77 +1,162 @@
 const kelvin = 273.15;
 
+// chartの編集用変数
+var c3Gene;
+
 // 小数点n位までを残す関数
 // number=対象の数値
 // n=残したい小数点以下の桁数
-function floatFormat( number, n ) {
-	const _pow = Math.pow( 10 , n ) ;
+function floatFormat(number, n) {
+    const _pow = Math.pow(10, n);
 
-	return Math.round( number * _pow ) / _pow ;
+    return Math.round(number * _pow) / _pow;
 }
 
-class Temperature {
+// 都市と温度のインスタンスクラス
+// class Temperature {
+//
+//     constructor(current, max, min, cityName) {
+//         // 現在温度
+//         this.current = current;
+//         // 最高温度
+//         this.max = max;
+//         // 最低温度
+//         this.min = min;
+//         // 都市名
+//         this.cityName = cityName;
+//     }
+//
+//     // 以下、各メンバ変数のゲッター
+//     getCurrent() {
+//         return Number(this.current) - kelvin, 1);
+//     }
+//
+//     getMax() {
+//         return Number(this.max) - kelvin, 1);
+//     }
+//
+//     getMin() {
+//         return Number(this.min) - kelvin, 1);
+//     }
+//
+//     getCityName() {
+//         return this.cityName;
+//     }
+//
+//     // 以下、各メンバ変数のセッター
+//     setCurrent(current){
+//       this.current = current;
+//     }
+//
+//     setMax(max){
+//       this.max = max;
+//     }
+//
+//     setMin(min){
+//       this.min = min;
+//     }
+//
+// }
 
-  constructor(current,max,min) {
-    this.current = current;
-    this.max = max;
-    this.min = min;
-  }
 
-  getCurrent(){
-    return floatFormat(Number(this.current) - kelvin,1);
-  }
+var current = [];
+var max = [];
+var min = [];
 
-  getMax(){
-    return floatFormat(Number(this.max) - kelvin,1);
-  }
+let currntK;
+let maxK;
+let minK;
 
-  getMin(){
-    return floatFormat(Number(this.min) - kelvin,1);
-  }
-
-}
-
+// cityNameのindexに紐づくcitycode
+const cityCode = ['1850147', '1853909', '1856057', '2128295', '1863958'];
 
 $(document).ready(function() {
+
+    //検出する都市名の配列
+    const cityName = ['Tokyo', 'Osaka', 'Nagoya', 'Sapporo', 'Hakata'];
+
+
+    $.each(cityCode, function(index, val) {
+        console.log(val);
+    });
+
     //テキストのスタイル変更
     changeTextStyle();
+
+    $.when(callWhetherAPI(cityCode))
+      .done(function(){
+        setTimeout(generateTempChart(current, max, min, cityName),5000);
+      });
+
+
+    // .fail(function() {
+    //     console.log("callAPI Error");
+    // });
+
     // c3でグラフを生成
     //c3Generate();
 
-    $.ajax({
-            url: 'http://api.openweathermap.org/data/2.5/weather?q=Tokyo,jp&APPID=26242bc33168b7fd0ce0021a3b962569',
-            type: 'GET',
-            dataType: 'jsonp',
-            cache: false
-            // data: {
-            //     param1: 'value1'
-            // }
-        })
-        .done(function(data) {
-            console.log("success");
-            console.log(data);
-
-            const temp = new Temperature(data.main.temp,data.main.temp_max,data.main.temp_min);
-
-            console.log(temp.getCurrent());
-            console.log(temp.getMax());
-            console.log(temp.getMin());
-
-            tempChart(temp);
-
-        })
-        .fail(function() {
-            console.log("error");
-        })
-        .always(function() {
-            console.log("complete");
-        });
-
-
-
-
-
+    // const tempTokyo = new Temperature(0, 0, 0, cityName[0]);
+    // const tempOsaka = new Temperature(0, 0, 0, cityName[1]);
+    // const tempNagoya = new Temperature(0, 0, 0, cityName[2]);
+    // const tempSapporo = new Temperature(0, 0, 0, cityName[3]);
+    // const tempHakata = new Temperature(0, 0, 0, cityName[4]);}
 });
+
+
+function callWhetherAPI(cityCode) {
+
+    var dfd = new $.Deferred;
+
+    $.each(cityCode, function(index, val) {
+        $.ajax({
+                url: 'http://api.openweathermap.org/data/2.5/weather?id=' + cityCode[index] + '&APPID=26242bc33168b7fd0ce0021a3b962569',
+                type: 'GET',
+                // クロスドメイン対策
+                dataType: 'jsonp',
+                //キャッシュをOFFにする
+                cache: false
+                    // data: {
+                    //     param1: 'value1'
+                    // }
+            })
+            .done(function(data) {
+
+                console.log(data);
+                console.log("done" + index);
+
+                current[index] = data.main.temp;
+                max[index] = data.main.temp_max;
+                min[index] = data.main.temp_min;
+
+
+                // current[index] = data.main.temp;
+                // max[index] = data.main.temp_max;
+                // min[index] = data.main.temp_min;
+
+
+                // if (index == 0) {
+                //     generateTempChart(temp);
+                // } else {
+                //   setTimeout(addTempChart(temp), 5000);
+                // }
+
+            })
+            .fail(function() {
+                console.log("error");
+            })
+            .always(function() {
+                console.log("complete");
+                console.log("cityCode.length:" + cityCode.length);
+                if (index == cityCode.length - 1) {
+                    console.log("before return.promise")
+                }
+            });
+
+    });
+
+}
+
 
 function changeTextStyle() {
     $("#myDiv").css({
@@ -80,91 +165,53 @@ function changeTextStyle() {
     });
 }
 
-function tempChart(temp){
-  c3.generate({
-    data: {
-        x:'x',
-        columns: [
-            ['x','Tokyo'],
-            ['current', temp.getCurrent()],
-            ['max',temp.getMax()],
-            ['min',temp.getMin()]
-        ],
-        type: 'bar'
-    },
-    axis: {
-        x: {
-            type: 'category',
-            tick: {
-                rotate: 75,
-                multiline: false
+function generateTempChart(current, max, min, cityName) {
+
+    c3Gene = c3.generate({
+        data: {
+            x: 'x',
+            columns: [
+                ['x', cityName[0], cityName[1], cityName[2], cityName[3], cityName[4]],
+                ['current', current[0], current[1], current[2], current[3], current[4]],
+                ['max', max[0], max[1], max[2], max[3], max[4]],
+                ['min', min[0], min[1], min[2], min[3], min[4]]
+            ],
+            colors: {
+                current: 'rgba(219, 255, 0, 0.37)',
+                max: 'rgba(255, 0, 0, 0.44)',
+                min: 'rgba(0, 0, 255, 0.39)'
             },
-            height: 60
+            type: 'bar'
+        },
+        axis: {
+            x: {
+                type: 'category',
+                tick: {
+                    rotate: 75,
+                    multiline: false
+                },
+                height: 60
+            }
+        },
+        bar: {
+            width: {
+                ratio: 0.2 // this makes bar width 50% of length between ticks
+            }
+            // or
+            //width: 100 // this makes bar width 100px
         }
-    },
-    bar: {
-        width: {
-            ratio: 0.1 // this makes bar width 50% of length between ticks
-        }
-        // or
-        //width: 100 // this makes bar width 100px
-    }
-});
+    });
 }
 
-function c3Generate() {
-  c3.generate({
-    data: {
-        columns: [
-            ['data1', 30, 200, 100, 400, 150, 250],
-            ['data2', 130, 100, 140, 200, 150, 50]
-        ],
-        type: 'bar'
-    },
-    bar: {
-        width: {
-            ratio: 0.5 // this makes bar width 50% of length between ticks
-        }
-        // or
-        //width: 100 // this makes bar width 100px
-    }
-});
-
-
-    // c3.generate({
-    //     bindto: '#chart',
-    //     data: {
-    //         columns: [
-    //             ['data1', 30, 200, 100, 400, 150, 250],
-    //             ['data2', 50, 20, 10, 40, 15, 25]
-    //         ],
-    //         axes: {
-    //             data2: 'y2'
-    //         }
-    //     },
-    //     axis: {
-    //         y2: {
-    //             show: true
-    //         }
-    //     }
-    // });
-    //
-    // c3.generate({
-    //     bindto: '#pie_chart',
-    //     data: {
-    //         columns: [
-    //             ["setosa", 0.2, 0.2, 0.2, 0.2, 0.2, 0.4, 0.3, 0.2, 0.2, 0.1, 0.2, 0.2, 0.1, 0.1, 0.2, 0.4, 0.4, 0.3, 0.3, 0.3, 0.2, 0.4, 0.2, 0.5, 0.2, 0.2, 0.4, 0.2, 0.2, 0.2, 0.2, 0.4, 0.1, 0.2, 0.2, 0.2, 0.2, 0.1, 0.2, 0.2, 0.3, 0.3, 0.2, 0.6, 0.4, 0.3, 0.2, 0.2, 0.2, 0.2],
-    //             ["versicolor", 1.4, 1.5, 1.5, 1.3, 1.5, 1.3, 1.6, 1.0, 1.3, 1.4, 1.0, 1.5, 1.0, 1.4, 1.3, 1.4, 1.5, 1.0, 1.5, 1.1, 1.8, 1.3, 1.5, 1.2, 1.3, 1.4, 1.4, 1.7, 1.5, 1.0, 1.1, 1.0, 1.2, 1.6, 1.5, 1.6, 1.5, 1.3, 1.3, 1.3, 1.2, 1.4, 1.2, 1.0, 1.3, 1.2, 1.3, 1.3, 1.1, 1.3],
-    //             ["virginica", 2.5, 1.9, 2.1, 1.8, 2.2, 2.1, 1.7, 1.8, 1.8, 2.5, 2.0, 1.9, 2.1, 2.0, 2.4, 2.3, 1.8, 2.2, 2.3, 1.5, 2.3, 2.0, 2.0, 1.8, 2.1, 1.8, 1.8, 1.8, 2.1, 1.6, 1.9, 2.0, 2.2, 1.5, 1.4, 2.3, 2.4, 1.8, 1.8, 2.1, 2.4, 2.3, 1.9, 2.3, 2.5, 2.3, 1.9, 2.0, 2.3, 1.8]
-    //         ],
-    //         type: 'pie',
-    //         onmouseover: function(d, i) {
-    //             console.log("onmouseover", d, i);
-    //         },
-    //         onmouseout: function(d, i) {
-    //             console.log("onmouseout", d, i);
-    //         }
-    //     }
-    // });
-
-}
+// function addTempChart(temp) {
+//     c3Gene.load({
+//         columns: [
+//             ['x', temp.getCityName()],
+//             ['current', temp.getCurrent()],
+//             ['max', temp.getMax()],
+//             ['min', temp.getMin()]
+//         ]
+//     });
+//
+//     console.log('addTempChart');
+// }
